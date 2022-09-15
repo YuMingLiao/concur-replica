@@ -18,6 +18,7 @@ import qualified Data.Text                as T
 import qualified Data.Map                 as M
 
 import           Replica.VDOM             (Attr(AText, ABool, AEvent, AMap), HTML, Namespace, VDOM(VNode, VText))
+import           Replica.VDOM.Types       (EventOptions(..))
 
 type WidgetConstraints m = (ShiftMap (Widget HTML) m, Monad m, MonadSafeBlockingIO m, MonadUnsafeBlockingIO m, MultiAlternative m)
 
@@ -29,12 +30,13 @@ elWithNamespace mNamespace e attrs children = do
   attrs' <- liftUnsafeBlockingIO $ mapM toAttr attrs
   shiftMap (wrapView (VNode e (M.fromList $ fmap fst attrs') mNamespace)) $ orr (children <> concatMap snd attrs')
   where
+    defAEvent = AEvent (EventOptions False False False)
     toAttr :: Props a -> IO ((T.Text, Attr), [m a])
     toAttr (Props k (PropText v)) = pure ((k, AText v), [])
     toAttr (Props k (PropBool v)) = pure ((k, ABool v), [])
     toAttr (Props k (PropEvent extract)) = do
       n <- newEmptyMVar
-      pure ((k, AEvent $ putMVar n), [liftSafeBlockingIO (extract <$> takeMVar n)])
+      pure ((k, defAEvent $ putMVar n), [liftSafeBlockingIO (extract <$> takeMVar n)])
     toAttr (Props k (PropMap m)) = do
       m' <- mapM toAttr m
       pure ((k, AMap $ M.fromList $ fmap fst m'), concatMap snd m')

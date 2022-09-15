@@ -9,10 +9,10 @@ import Concur.Replica
 import Data.Maybe
 import Data.Text (Text, pack)
 import Replica.VDOM (HTML)
-
+import Network.WebSockets.Connection (defaultConnectionOptions)
 import Network.Wai.Handler.Replica as R
-
 import Prelude hiding (div)
+import Data.IORef
 
 class Route a where
   fromRoute :: String -> a
@@ -66,4 +66,21 @@ routingApp (SiteC c) = do
   pure $ Left (SiteA 666)
 
 main :: IO ()
-main = runDefault 8080 "Select" $ \ctx -> route ctx (SiteA 0) routingApp
+main = do
+  sessionIDRef <-newIORef (0 :: Int)
+  run 8080 (defaultIndex "Session" []) defaultConnectionOptions Prelude.id (\ctx -> route ctx (SiteA 0) routingApp) (getSession sessionIDRef)
+
+getSession = \ sessionIDRef _ -> do
+  sessionID <- readIORef sessionIDRef
+  modifyIORef sessionIDRef (+1)
+  print sessionID
+  pure sessionID
+
+-- TODO
+-- [] expired
+-- [] associated with login user
+--
+--
+--
+-- UserAction = Temp SessionID TmpData
+-- UserAction = Logout SureData

@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.34.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 695d1e961be2224fce5a208b4429164c10fa17ac2d07c449317b49cb5d8d4b6a
+-- hash: 350276823bfc9646f882a11f2228728d46fc29c35dc497341db3a7614caf7b80
 
 name:           concur-replica
 version:        0.1.0.0
@@ -63,6 +63,31 @@ executable concur-replica-calc
       Paths_concur_replica
   hs-source-dirs:
       examples/Calc
+  ghc-options: -Wall -ferror-spans
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , concur-core
+    , concur-replica
+    , containers
+    , free >=4.12
+    , replica
+    , stm
+    , text
+    , transformers >=0.5
+    , wai
+    , wai-websockets
+    , warp
+    , websockets
+  default-language: Haskell2010
+
+executable concur-replica-chat
+  main-is: Main.hs
+  other-modules:
+      Paths_concur_replica
+  hs-source-dirs:
+      examples/Chat
   ghc-options: -Wall -ferror-spans
   build-depends:
       aeson
