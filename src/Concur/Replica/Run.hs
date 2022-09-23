@@ -18,8 +18,8 @@ import qualified Network.Wai.Handler.Warp        as W
 noSession :: R.Context -> IO ()
 noSession = \_ -> pure ()
 
-run :: Int -> HTML -> ConnectionOptions -> Middleware -> (R.Context -> Widget HTML a) -> (R.Context -> IO session) -> IO ()
-run port index connectionOptions middleware widget getSession
+run :: Int -> HTML -> ConnectionOptions -> Middleware -> (R.Context -> IO session) -> (R.Context -> Widget HTML a) -> IO ()
+run port index connectionOptions middleware getSession widget
   = W.run port
   $ R.app index connectionOptions middleware (pure (step <$> widget)) getSession stepWidget
 

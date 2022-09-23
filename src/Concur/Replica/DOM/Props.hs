@@ -27,7 +27,8 @@ key :: T.Text -> Props a
 key v = textProp "key" v
 
 style :: [(T.Text, T.Text)] -> Props a
-style m = Props "style" (PropMap [ Props k (PropText v) | (k, v) <- m ])
+-- style m = Props "style" (PropMap [ Props k (PropText v) | (k, v) <- m ])
+style m = Props "style" (PropText (T.intercalate " " [ k <> ":" <> v <> ";" | (k, v) <- m ]))
 
 -- | Define multiple classes conditionally
 --
