@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Concur.Replica.DOM.Events where
 
@@ -11,7 +13,6 @@ import qualified Data.Text                as T
 
 import           Replica.VDOM.Types       (DOMEvent(getDOMEvent))
 
--- TODO: return Maybe here
 extractResult :: A.Result a -> a
 extractResult (A.Success a) = a
 extractResult (A.Error e)   = error e
@@ -25,11 +26,12 @@ instance A.FromJSON Target where
     <$> o .: "value"
   parseJSON _ = fail "Expected object"
 
+
 data BaseEvent = BaseEvent
   { bubbles          :: !Bool
   , cancelable       :: !Bool
   , composed         :: !Bool
-  , currentTarget    :: !Target
+  , currentTarget    :: !(Maybe Target)
   , defaultPrevented :: !Bool
   , eventPhase       :: !Int
   , target           :: !Target
@@ -51,6 +53,9 @@ instance A.FromJSON BaseEvent where
     <*> o .: "type"
     <*> o .: "isTrusted"
   parseJSON _ = fail "Expected object"
+
+--  Object (fromList [("AT_TARGET",Number 2.0),("BUBBLING_PHASE",Number 3.0),("CAPTURING_PHASE",Number 1.0),("NONE",Number 0.0),("bubbles",Bool True),("cancelBubble",Bool False),("cancelable",Bool False),("composed",Bool True),("currentTarget",Null),("data",String "\12585"),("dataTransfer",Null),("defaultPrevented",Bool False),("detail",Number 0.0),("eventPhase",Number 0.0),("inputType",String "insertCompositionText"),("isComposing",Bool True),("isTrusted",Bool True),("path",Array [Object (fromList [("value",String "\12585")]),Object (fromList []),Object (fromList []),Object (fromList []),Object (fromList []),String "Window"]),("returnValue",Bool True),("sourceCapabilities",Null),("srcElement",Object (fromList [("value",String "\12585")])),("target",Object (fromList [("value",String "\12585")])),("timeStamp",Number 2885.199999999255),("type",String "input"),("view",Null),("which",Number 0.0)])
+
 
 data MouseEvent = MouseEvent
   { mouseBaseEvent     :: !BaseEvent
