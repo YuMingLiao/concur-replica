@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Concur.Replica.DOM.Events where
 
@@ -10,40 +12,42 @@ import qualified Data.Aeson               as A
 import qualified Data.Text                as T
 
 import           Replica.VDOM.Types       (DOMEvent(getDOMEvent))
+import Debug.Trace
 
--- TODO: return Maybe here
-extractResult :: A.Result a -> a
+extractResult :: Show a => A.Result a -> a
 extractResult (A.Success a) = a
 extractResult (A.Error e)   = error e
 
 data Target = Target
   { targetValue :: T.Text
-  }
+  } deriving Show
 
+--canvas onClick doesn't return a target. But I don't want to change apis in examples.
 instance A.FromJSON Target where
-  parseJSON (A.Object o) = Target
-    <$> o .: "value"
+  parseJSON (A.Object o) = (maybe (Target "") Target) 
+    <$> o .:? "value"
   parseJSON _ = fail "Expected object"
+
 
 data BaseEvent = BaseEvent
   { bubbles          :: !Bool
   , cancelable       :: !Bool
   , composed         :: !Bool
-  , currentTarget    :: !Target
+  , currentTarget    :: !(Maybe Target)
   , defaultPrevented :: !Bool
   , eventPhase       :: !Int
   , target           :: !Target
   , timeStamp        :: !Double
   , eventType        :: !T.Text
   , isTrusted        :: !Bool
-  }
+  } deriving Show
 
 instance A.FromJSON BaseEvent where
   parseJSON (A.Object o) = BaseEvent
     <$> o .: "bubbles"
     <*> o .: "cancelable"
     <*> o .: "composed"
-    <*> o .: "currentTarget"
+    <*> o .:? "currentTarget"
     <*> o .: "defaultPrevented"
     <*> o .: "eventPhase"
     <*> o .: "target"
@@ -51,6 +55,8 @@ instance A.FromJSON BaseEvent where
     <*> o .: "type"
     <*> o .: "isTrusted"
   parseJSON _ = fail "Expected object"
+
+
 
 data MouseEvent = MouseEvent
   { mouseBaseEvent     :: !BaseEvent
@@ -68,7 +74,7 @@ data MouseEvent = MouseEvent
   , mouseScreenX       :: !Int
   , mouseScreenY       :: !Int
   , mouseShiftKey      :: !Bool
-  }
+  } deriving Show
 
 instance A.FromJSON MouseEvent where
   parseJSON obj@(A.Object o) = MouseEvent
@@ -99,7 +105,7 @@ data KeyboardEvent = KeyboardEvent
   , kbdMetaKey     :: !Bool
   , kbdRepeat      :: !Bool
   , kbdShiftKey    :: !Bool
-  }
+  } deriving Show
 
 instance A.FromJSON KeyboardEvent where
   parseJSON obj@(A.Object o) = KeyboardEvent

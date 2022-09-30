@@ -68,8 +68,7 @@ routingApp (SiteC c) = do
 main :: IO ()
 main = do
   sessionIDRef <-newIORef (0 :: Int)
-  run 8080 (defaultIndex "Session" []) defaultConnectionOptions Prelude.id (\ctx -> route ctx (SiteA 0) routingApp) (getSession sessionIDRef)
-
+  run 8080 (defaultIndex "Session" []) defaultConnectionOptions Prelude.id (getSession sessionIDRef) (\ctx -> route ctx (SiteA 0) routingApp) 
 getSession = \ sessionIDRef _ -> do
   sessionID <- readIORef sessionIDRef
   modifyIORef sessionIDRef (+1)
