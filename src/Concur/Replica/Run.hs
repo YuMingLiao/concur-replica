@@ -41,4 +41,9 @@ stepWidget ctx v sess = case v ctx of
   Free (StepSTM stm next)  -> atomically stm >>= (\v -> stepWidget ctx v sess) . \r _ -> next r
   Free Forever             -> pure (Nothing, const Nothing, pure Nothing)
 
+-- kamoii's replica: app :: Config st -> (Application -> IO a) -> IO a
+-- cfgInitial :: ResourceT IO st
+-- cfgStep :: st -> ResourceT IO (Maybe (V.HTML, st))
 
+stepWidget :: st -> ResourceT IO (Maybe (V.HTML, st))
+stepWidget st = case
