@@ -20,21 +20,23 @@ import qualified Network.Wai.Handler.Warp        as W
 import Chronos.Types as Ch
 import Control.Monad.IO.Class (liftIO)
 import Colog.Core
+import Data.Text.IO as TIO
+import Replica.Log (Log, format)
+logAction :: LogAction IO (Time, Log)
+logAction = LogAction $ \(x,y) -> liftIO $ TIO.putStrLn $ format (x,y)
 
-noSession :: R.Context -> IO ()
-noSession = \_ -> pure ()
 
-
-run :: Int -> HTML -> ConnectionOptions -> Middleware -> (R.Context -> IO session) -> (R.Context -> Widget HTML a) -> IO ()
-run port index connectionOptions middleware getSession widget
-  = R.app (R.Config "" index connectionOptions middleware logPrint (sec 30) (sec 30) (liftIO (pure (step (widget undefined)))) (liftIO <$> stepWidget) ) (W.run port) 
+run :: Int -> HTML -> ConnectionOptions -> Middleware -> Widget HTML a -> IO ()
+run port index connectionOptions middleware widget
+  = R.app (R.Config "" index connectionOptions middleware logAction (minute 5) (minute 5) (liftIO (pure (step widget))) (liftIO <$> stepWidget) ) (W.run port) 
 
 
 sec n = Ch.Timespan (n * 1000000000)
+minute n = Ch.Timespan (n * 1000000000 * 60)
 
-runDefault :: Int -> T.Text -> (R.Context -> Widget HTML a) -> IO ()
+runDefault :: Int -> T.Text -> Widget HTML a -> IO ()
 runDefault port title widget
-  = R.app (R.Config title (defaultIndex title []) defaultConnectionOptions id logPrint (sec 30) (sec 30) (liftIO (pure (step (widget undefined)))) (liftIO <$> stepWidget) ) (W.run port) 
+  = R.app (R.Config title (defaultIndex title []) defaultConnectionOptions id logAction (minute 5) (minute 5) (liftIO (pure (step widget))) (liftIO <$> stepWidget) ) (W.run port) 
 
 
 {-

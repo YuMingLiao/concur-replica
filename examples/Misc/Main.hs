@@ -131,7 +131,7 @@ counterApp :: IO ()
 counterApp = runDefault 8080 "Counter" (\_ -> counter 0)
 
 todosApp :: IO ()
-todosApp = runDefault 8080 "Todos" $ \_ -> todos
+todosApp = runDefault 8080 "Todos" $ todos
 
 clientSidePredictionApp :: IO ()
 clientSidePredictionApp

@@ -71,5 +71,5 @@ main = do
     -- Channel to alert other clients that the messageHistory is updated
     messageAlert <- newTChanIO
     messageHistory <- newTVarIO []
-    runDefault 8080 "Chat" $ \_ -> chatWidget messageHistory
+    runDefault 8080 "Chat" $ chatWidget messageHistory
         =<< (liftIO . atomically $ dupTChan messageAlert)

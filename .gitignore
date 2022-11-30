@@ -1,4 +1,4 @@
 .stack-work
 js/dist
-dist-newstyle/
+dist-newstyle
 *.nix

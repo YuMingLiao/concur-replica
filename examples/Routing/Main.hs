@@ -66,4 +66,4 @@ routingApp (SiteC c) = do
   pure $ Left (SiteA 666)
 
 main :: IO ()
-main = runDefault 8080 "Select" $ \ctx -> route ctx (SiteA 0) routingApp
+main = runDefault 8080 "Select" $ route ctx (SiteA 0) routingApp

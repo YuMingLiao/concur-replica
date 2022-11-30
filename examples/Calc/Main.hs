@@ -90,6 +90,6 @@ makeCalcDisplay = liftIO $ remoteWidget defaultDisplay handleResult
 
 -- Now we wire them together easily
 main :: IO ()
-main = runDefault 8080 "Calculator" $ \ctx -> do
+main = runDefault 8080 "Calculator" $ do
   (showResult, calcDisp) <- makeCalcDisplay
   div [] [calcDisp, buttonsWidget showResult]
