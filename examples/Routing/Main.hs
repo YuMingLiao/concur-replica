@@ -11,7 +11,7 @@ import Data.Text (Text, pack)
 import Replica.VDOM (HTML)
 
 import Network.Wai.Handler.Replica as R
-
+import Replica.Application as R
 import Prelude hiding (div)
 
 class Route a where

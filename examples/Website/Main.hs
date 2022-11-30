@@ -19,7 +19,7 @@ import Concur.Replica (runDefault)
 import Control.Concurrent.STM
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (pack)
-import Network.Wai.Handler.Replica (Context(Context, call, registerCallback))
+import Replica.Application (Context(Context, call, registerCallback))
 import Prelude
 import Replica.VDOM (HTML)
 

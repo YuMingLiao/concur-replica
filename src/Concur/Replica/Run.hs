@@ -1,3 +1,4 @@
+{-# Language OverloadedStrings #-}
 module Concur.Replica.Run where
 
 import           Concur.Core                     (SuspendF(StepView, StepIO, StepBlock, StepSTM, Forever), Widget, step)
@@ -13,11 +14,30 @@ import           Replica.VDOM.Types              (DOMEvent(DOMEvent), HTML)
 import           Network.WebSockets.Connection   (ConnectionOptions, defaultConnectionOptions)
 import           Network.Wai                     (Middleware)
 import qualified Network.Wai.Handler.Replica     as R
+import qualified Replica.Types                   as R
+import qualified Replica.Application             as R
 import qualified Network.Wai.Handler.Warp        as W
+import Chronos.Types as Ch
+import Control.Monad.IO.Class (liftIO)
+import Colog.Core
 
 noSession :: R.Context -> IO ()
 noSession = \_ -> pure ()
 
+
+run :: Int -> HTML -> ConnectionOptions -> Middleware -> (R.Context -> IO session) -> (R.Context -> Widget HTML a) -> IO ()
+run port index connectionOptions middleware getSession widget
+  = R.app (R.Config "" index connectionOptions middleware logPrint (sec 30) (sec 30) (liftIO (pure (step (widget undefined)))) (liftIO <$> stepWidget) ) (W.run port) 
+
+
+sec n = Ch.Timespan (n * 1000000000)
+
+runDefault :: Int -> T.Text -> (R.Context -> Widget HTML a) -> IO ()
+runDefault port title widget
+  = R.app (R.Config title (defaultIndex title []) defaultConnectionOptions id logPrint (sec 30) (sec 30) (liftIO (pure (step (widget undefined)))) (liftIO <$> stepWidget) ) (W.run port) 
+
+
+{-
 run :: Int -> HTML -> ConnectionOptions -> Middleware -> (R.Context -> IO session) -> (R.Context -> Widget HTML a) -> IO ()
 run port index connectionOptions middleware getSession widget
   = W.run port
@@ -27,18 +47,28 @@ runDefault :: Int -> T.Text -> (R.Context -> Widget HTML a) -> IO ()
 runDefault port title widget
   = W.run port
   $ R.app (defaultIndex title []) defaultConnectionOptions id (pure (step <$> widget)) noSession stepWidget
-
+-}
 -- It's an interpreter for the computation.
 -- | No need to use this directly if you're using 'run' or 'runDefault'.
-stepWidget :: R.Context -> (R.Context -> Free (SuspendF HTML) a) -> b -> IO (Maybe HTML, R.Event -> Maybe (IO ()), IO (Maybe (R.Context -> Free (SuspendF HTML) a)))
-stepWidget ctx v sess = case v ctx of
+{-
+stepWidget :: R.Context -> (R.Context -> Free (SuspendF HTML) a) -> IO (Maybe HTML, R.Event -> Maybe (IO ()), IO (Maybe (R.Context -> Free (SuspendF HTML) a)))
+stepWidget ctx v = case v ctx of
   Pure a                   -> pure (Nothing, const Nothing, pure Nothing)
   Free (StepView new next) -> pure $ (Just new
                                      ,\event -> fireEvent new (R.evtPath event) (R.evtType event) (DOMEvent $ R.evtEvent event) 
                                      ,pure (Just (const next)))
-  Free (StepIO io next)    -> io >>= (\v -> stepWidget ctx v sess)  . \r _ -> next r 
-  Free (StepBlock io next) -> io >>= (\v -> stepWidget ctx v sess) . \r _ -> next r 
-  Free (StepSTM stm next)  -> atomically stm >>= (\v -> stepWidget ctx v sess) . \r _ -> next r
+  Free (StepIO io next)    -> io >>= (\v -> stepWidget ctx v)  . \r _ -> next r 
+  Free (StepBlock io next) -> io >>= (\v -> stepWidget ctx v) . \r _ -> next r 
+  Free (StepSTM stm next)  -> atomically stm >>= (\v -> stepWidget ctx v) . \r _ -> next r
   Free Forever             -> pure (Nothing, const Nothing, pure Nothing)
+-}
+stepWidget :: Free (SuspendF HTML) a -> IO (Maybe (HTML, Free (SuspendF HTML) a))
+stepWidget v = case v of
+  Pure a                   -> pure Nothing
+  Free (StepView new next) -> pure (Just (new, next))
+  Free (StepIO io next)    -> io >>= stepWidget . next 
+  Free (StepBlock io next) -> io >>= stepWidget . next
+  Free (StepSTM stm next)  -> atomically stm >>= stepWidget . next 
+  Free Forever             -> pure Nothing 
 
 
