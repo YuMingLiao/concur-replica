@@ -22,55 +22,29 @@ import Control.Monad.IO.Class (liftIO)
 import Colog.Core
 import Data.Text.IO as TIO
 import Replica.Log (Log, format)
+import Debug.Trace
+
 logAction :: LogAction IO (Time, Log)
 logAction = LogAction $ \(x,y) -> liftIO $ TIO.putStrLn $ format (x,y)
-
 
 run :: Int -> HTML -> ConnectionOptions -> Middleware -> Widget HTML a -> IO ()
 run port index connectionOptions middleware widget
   = R.app (R.Config "" index connectionOptions middleware logAction (minute 5) (minute 5) (liftIO (pure (step widget))) (liftIO <$> stepWidget) ) (W.run port) 
-
 
 sec n = Ch.Timespan (n * 1000000000)
 minute n = Ch.Timespan (n * 1000000000 * 60)
 
 runDefault :: Int -> T.Text -> Widget HTML a -> IO ()
 runDefault port title widget
-  = R.app (R.Config title (defaultIndex title []) defaultConnectionOptions id logAction (minute 5) (minute 5) (liftIO (pure (step widget))) (liftIO <$> stepWidget) ) (W.run port) 
+  = R.app (R.Config title [] defaultConnectionOptions id logAction (minute 5) (minute 5) (liftIO (pure (step widget))) (liftIO <$> stepWidget) ) (W.run port) 
 
-
-{-
-run :: Int -> HTML -> ConnectionOptions -> Middleware -> (R.Context -> IO session) -> (R.Context -> Widget HTML a) -> IO ()
-run port index connectionOptions middleware getSession widget
-  = W.run port
-  $ R.app index connectionOptions middleware (pure (step <$> widget)) getSession stepWidget
-
-runDefault :: Int -> T.Text -> (R.Context -> Widget HTML a) -> IO ()
-runDefault port title widget
-  = W.run port
-  $ R.app (defaultIndex title []) defaultConnectionOptions id (pure (step <$> widget)) noSession stepWidget
--}
--- It's an interpreter for the computation.
--- | No need to use this directly if you're using 'run' or 'runDefault'.
-{-
-stepWidget :: R.Context -> (R.Context -> Free (SuspendF HTML) a) -> IO (Maybe HTML, R.Event -> Maybe (IO ()), IO (Maybe (R.Context -> Free (SuspendF HTML) a)))
-stepWidget ctx v = case v ctx of
-  Pure a                   -> pure (Nothing, const Nothing, pure Nothing)
-  Free (StepView new next) -> pure $ (Just new
-                                     ,\event -> fireEvent new (R.evtPath event) (R.evtType event) (DOMEvent $ R.evtEvent event) 
-                                     ,pure (Just (const next)))
-  Free (StepIO io next)    -> io >>= (\v -> stepWidget ctx v)  . \r _ -> next r 
-  Free (StepBlock io next) -> io >>= (\v -> stepWidget ctx v) . \r _ -> next r 
-  Free (StepSTM stm next)  -> atomically stm >>= (\v -> stepWidget ctx v) . \r _ -> next r
-  Free Forever             -> pure (Nothing, const Nothing, pure Nothing)
--}
-stepWidget :: Free (SuspendF HTML) a -> IO (Maybe (HTML, Free (SuspendF HTML) a))
-stepWidget v = case v of
-  Pure a                   -> pure Nothing
-  Free (StepView new next) -> pure (Just (new, next))
-  Free (StepIO io next)    -> io >>= stepWidget . next 
-  Free (StepBlock io next) -> io >>= stepWidget . next
-  Free (StepSTM stm next)  -> atomically stm >>= stepWidget . next 
-  Free Forever             -> pure Nothing 
+stepWidget :: Free (SuspendF HTML) a -> IO (Maybe (HTML, Free (SuspendF HTML) a, IO ()))
+stepWidget v = case trace "stepWidget v" v of
+  Pure a                   -> trace "Pure a" $ pure Nothing
+  Free (StepView new next) -> trace "StepView" $ pure (Just (new, next, pure ()))
+  Free (StepIO io next)    -> trace "StepIO" $ io >>= stepWidget . next 
+  Free (StepBlock io next) -> trace "StepBlock" $ io >>= stepWidget . next
+  Free (StepSTM stm next)  -> trace "StepSTM" $ atomically stm >>= stepWidget . next 
+  Free Forever             -> trace "Forever" $ pure Nothing 
 
 
