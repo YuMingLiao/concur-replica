@@ -15,16 +15,16 @@
 module Main where
 
 import Concur.Core (Widget, liftSTM, orr)
-import Concur.Replica (runDefault)
+import Concur.Replica (runDefault, text, onClick, button)
 import Control.Concurrent.STM
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (pack)
 import Replica.Application (Context(Context, call, registerCallback))
 import Prelude
 import Replica.VDOM (HTML)
-
 import qualified Concur.Replica.DOM as H
 import qualified Concur.Replica.DOM.Events as P
+import Debug.Trace
 
 class Route a where
   fromRoute :: String -> a
@@ -36,29 +36,35 @@ data AppUpdate a b
 
 route :: forall a b. Route a => Context -> a -> (a -> Widget HTML (AppUpdate a b)) -> Widget HTML b
 route Context{call, registerCallback} initial f = do
+  liftIO $ print "start using ctx"
   chan <- liftIO newHistoryChan
+  liftIO $ print "history chan newed"
   go initial chan
   where
     newHistoryChan :: IO (TChan String)
     newHistoryChan = do
+      print "newTChanIO"
       chan <- newTChanIO
+      print "registerCallback"
       cb <- registerCallback $ \path -> atomically (writeTChan chan path)
-      call cb "window.onpopstate = function(event) { callCallback(arg, location.pathname); };"
+      print "call"
+      call cb "window.onpopstate = function(event) { console.log('popstate'); callCallback(arg, location.pathname); };"
       pure chan
 
     go :: a -> TChan String -> Widget HTML b
     go a chan = do
+      liftIO $ print "inside go"
       r <- orr [ Left <$> f a, Right <$> liftSTM (readTChan chan) ]
       case r of
         Left (UpdateChangeUrl a') -> do
-          liftIO $ call (toRoute a') "window.history.pushState({}, \"\", arg);"
+          liftIO $ call (toRoute a') "console.log('UpdateChangeUrl'); window.history.pushState({}, \"\", arg);"
           go a' chan
 
         Left (UpdateExit b) ->
           pure b
 
         Right path ->
-          go (fromRoute path) chan
+          go (fromRoute (trace (show path) path)) chan
 
 --------------------------------------------------------------------------------
 

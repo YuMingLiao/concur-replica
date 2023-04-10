@@ -27,24 +27,27 @@ import Debug.Trace
 logAction :: LogAction IO (Time, Log)
 logAction = LogAction $ \(x,y) -> liftIO $ TIO.putStrLn $ format (x,y)
 
-run :: Int -> HTML -> ConnectionOptions -> Middleware -> Widget HTML a -> IO ()
-run port index connectionOptions middleware widget
-  = R.app (R.Config "" index connectionOptions middleware logAction (minute 5) (minute 5) (liftIO (pure (step widget))) (liftIO <$> stepWidget) ) (W.run port) 
+compose2 :: (c -> d) -> (a -> b -> c) -> a -> b -> d
+compose2 g f x y = g (f x y)
+
+run :: Int -> T.Text -> HTML -> ConnectionOptions -> Middleware -> (R.Context -> Widget HTML a) -> IO ()
+run port title header connectionOptions middleware widget
+  = R.app (R.Config title header connectionOptions middleware logAction (minute 5) (minute 5) (liftIO . pure $ step <$> widget) (liftIO `compose2` stepWidget) ) (W.run port) 
 
 sec n = Ch.Timespan (n * 1000000000)
 minute n = Ch.Timespan (n * 1000000000 * 60)
 
-runDefault :: Int -> T.Text -> Widget HTML a -> IO ()
+runDefault :: Int -> T.Text -> (R.Context -> Widget HTML a) -> IO ()
 runDefault port title widget
-  = R.app (R.Config title [] defaultConnectionOptions id logAction (minute 5) (minute 5) (liftIO (pure (step widget))) (liftIO <$> stepWidget) ) (W.run port) 
+  = R.app (R.Config title [] defaultConnectionOptions id logAction (minute 5) (minute 5) (liftIO . pure $ (step <$> widget)) (liftIO `compose2` stepWidget) ) (W.run port) 
 
-stepWidget :: Free (SuspendF HTML) a -> IO (Maybe (HTML, Free (SuspendF HTML) a, IO ()))
-stepWidget v = case trace "stepWidget v" v of
+stepWidget :: R.Context -> (R.Context -> Free (SuspendF HTML) a) -> IO (Maybe (HTML, R.Context -> Free (SuspendF HTML) a, IO ()))
+stepWidget ctx v = case trace "stepWidget v" (v ctx) of
   Pure a                   -> trace "Pure a" $ pure Nothing
-  Free (StepView new next) -> trace "StepView" $ pure (Just (new, next, pure ()))
-  Free (StepIO io next)    -> trace "StepIO" $ io >>= stepWidget . next 
-  Free (StepBlock io next) -> trace "StepBlock" $ io >>= stepWidget . next
-  Free (StepSTM stm next)  -> trace "StepSTM" $ atomically stm >>= stepWidget . next 
+  Free (StepView new next) -> trace "StepView" $ pure (Just (new, const next , pure ()))
+  Free (StepIO io next)    -> trace "StepIO" $ io >>= stepWidget ctx . \r _ -> next r 
+  Free (StepBlock io next) -> trace "StepBlock" $ io >>= stepWidget ctx . \r _ -> next r
+  Free (StepSTM stm next)  -> trace "StepSTM" $ atomically stm >>= stepWidget ctx . \r _ -> next r
   Free Forever             -> trace "Forever" $ pure Nothing 
 
 
