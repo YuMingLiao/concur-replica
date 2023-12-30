@@ -20,4 +20,4 @@ counter x = do
     Right _ -> counter (x + 1)
 
 main :: IO ()
-main = runDefault 8080 "Counter" (counter 0)
+main = runDefault 8080 "Counter" $ \_ -> (counter 0)

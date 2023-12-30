@@ -42,12 +42,12 @@ runDefault port title widget
   = R.app (R.Config title [] defaultConnectionOptions id logAction (minute 5) (minute 5) (liftIO . pure $ (step <$> widget)) (liftIO `compose2` stepWidget) ) (W.run port) 
 
 stepWidget :: R.Context -> (R.Context -> Free (SuspendF HTML) a) -> IO (Maybe (HTML, R.Context -> Free (SuspendF HTML) a, IO ()))
-stepWidget ctx v = case trace "stepWidget v" (v ctx) of
-  Pure a                   -> trace "Pure a" $ pure Nothing
-  Free (StepView new next) -> trace "StepView" $ pure (Just (new, const next , pure ()))
-  Free (StepIO io next)    -> trace "StepIO" $ io >>= stepWidget ctx . \r _ -> next r 
-  Free (StepBlock io next) -> trace "StepBlock" $ io >>= stepWidget ctx . \r _ -> next r
-  Free (StepSTM stm next)  -> trace "StepSTM" $ atomically stm >>= stepWidget ctx . \r _ -> next r
-  Free Forever             -> trace "Forever" $ pure Nothing 
+stepWidget ctx v = case (v ctx) of
+  Pure a                   -> pure Nothing
+  Free (StepView new next) -> pure (Just (new, const next , pure ()))
+  Free (StepIO io next)    -> io >>= stepWidget ctx . \r _ -> next r 
+  Free (StepBlock io next) -> io >>= stepWidget ctx . \r _ -> next r
+  Free (StepSTM stm next)  -> atomically stm >>= stepWidget ctx . \r _ -> next r
+  Free Forever             -> pure Nothing 
 
 
