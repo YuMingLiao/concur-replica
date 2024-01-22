@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Concur.Replica.DOM.Events where
 
@@ -19,14 +20,22 @@ extractResult (A.Success a) = a
 extractResult (A.Error e)   = error e
 
 data Target = Target
-  { targetValue :: T.Text
+  { targetValue :: Maybe T.Text,
+    targetTagName :: Maybe T.Text,
+    targetId :: Maybe T.Text,
+    targetName :: Maybe T.Text,
+    targetClass :: Maybe T.Text
   } deriving Show
 
---canvas onClick doesn't return a target. But I don't want to change apis in examples.
 instance A.FromJSON Target where
-  parseJSON (A.Object o) = (maybe (Target "") Target) 
+  parseJSON (A.Object o) = Target
     <$> o .:? "value"
+    <*> o .:? "tagName"
+    <*> o .:? "id"
+    <*> o .:? "name"
+    <*> o .:? "className"
   parseJSON _ = fail "Expected object"
+
 
 
 data BaseEvent = BaseEvent
@@ -41,6 +50,8 @@ data BaseEvent = BaseEvent
   , eventType        :: !T.Text
   , isTrusted        :: !Bool
   } deriving Show
+
+
 
 instance A.FromJSON BaseEvent where
   parseJSON (A.Object o) = BaseEvent
@@ -119,6 +130,32 @@ instance A.FromJSON KeyboardEvent where
     <*> o .: "repeat"
     <*> o .: "shiftKey"
   parseJSON _ = fail "Expected object"
+
+
+data CustomEvent a = CustomEvent
+  { ceDetail           :: !a
+  } deriving Show
+
+instance A.FromJSON (CustomEvent T.Text) where
+  parseJSON obj@(A.Object o) = CustomEvent
+    <$> o .: "detail"
+  parseJSON _ = fail "Expected object"
+
+instance A.FromJSON (CustomEvent LatLng) where
+  parseJSON obj@(A.Object o) = CustomEvent
+    <$> o .: "detail"
+  parseJSON _ = fail "Expected object"
+
+data LatLng = LatLng Double Double deriving Show
+
+instance A.FromJSON LatLng where
+  parseJSON obj@(A.Object o) = LatLng 
+    <$> o .: "lat"
+    <*> o .: "lng"
+  parseJSON _ = fail "Expected object"
+
+
+
 
 --------------------------------------------------------------------------------
 
@@ -208,3 +245,10 @@ onDragLeave = Props "onDragLeave" (PropEvent (extractResult . A.fromJSON . getDO
 -- | https://developer.mozilla.org/en-US/docs/Web/Events/drag
 onDrag :: Props MouseEvent
 onDrag = Props "onDrag" (PropEvent (extractResult . A.fromJSON . getDOMEvent))
+
+
+
+onLatLngClick :: Props (CustomEvent LatLng)
+onLatLngClick = Props "onLatLngClick" (PropEvent (extractResult . A.fromJSON . getDOMEvent))
+
+

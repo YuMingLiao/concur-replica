@@ -21,11 +21,14 @@ import Chronos.Types as Ch
 import Control.Monad.IO.Class (liftIO)
 import Colog.Core
 import Data.Text.IO as TIO
+import System.IO (hFlush, stdout)
 import Replica.Log (Log, format)
 import Debug.Trace
 
 logAction :: LogAction IO (Time, Log)
-logAction = LogAction $ \(x,y) -> liftIO $ TIO.putStrLn $ format (x,y)
+logAction = LogAction $ \(x,y) -> liftIO $ do 
+  TIO.putStrLn $ format (x,y)
+  hFlush stdout
 
 compose2 :: (c -> d) -> (a -> b -> c) -> a -> b -> d
 compose2 g f x y = g (f x y)
